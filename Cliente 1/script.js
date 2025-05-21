@@ -148,15 +148,14 @@ document.addEventListener('click', function (e) {
   }
 });
 
+// Ya no se agrega la clase pulse-text ni se aplica brillo
 function addTextPulse() {
   const el = document.getElementById('typewriter');
   if (el) {
-    // Resalta "I love You" con una clase especial y aplica el brillo al texto central
     el.innerHTML = el.innerHTML.replace(
       /(I love You)/i,
       '<span class="love-big">$1</span>'
     );
-    el.classList.add('pulse-text');
   }
 }
 
