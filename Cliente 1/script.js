@@ -15,13 +15,17 @@ function randomBetween(a, b) {
   return a + Math.random() * (b - a);
 }
 
+// Detecta si es móvil
+function isMobile() {
+  return window.innerWidth <= 600;
+}
+
 function createHeart() {
   const heart = document.createElement('div');
   heart.className = 'heart';
-  // Ajusta tamaño según pantalla
-  const isMobile = window.innerWidth <= 600;
-  const minSize = isMobile ? 20 : 20;
-  const maxSize = isMobile ? 48 : 80;
+  const mobile = isMobile();
+  const minSize = mobile ? 20 : 20;
+  const maxSize = mobile ? 48 : 80;
   const size = randomBetween(minSize, maxSize); // px
   heart.style.width = `${size}px`;
   heart.style.height = `${size * 0.9}px`;
@@ -107,9 +111,10 @@ function createHeart() {
   document.querySelector('.hearts-container').appendChild(heart);
 }
 
-// Gradual heart creation
-const maxHearts = 360;
-let currentHearts = 60;
+// Ajusta la cantidad de corazones y partículas según el dispositivo
+const maxHearts = isMobile() ? 90 : 360;
+let currentHearts = isMobile() ? 20 : 60;
+const particlesPerInterval = isMobile() ? 4 : 14;
 
 // Crea los corazones iniciales
 for (let i = 0; i < currentHearts; i++) {
@@ -123,64 +128,10 @@ const interval = setInterval(() => {
   } else {
     clearInterval(interval);
   }
-}, 30); // Más rápido (antes era 80)
-
-// --- PARTICLE EFFECT ---
-function createParticle(x, y, color, size = null, duration = null) {
-  const particle = document.createElement('div');
-  particle.className = 'particle';
-  particle.style.left = `${x}px`;
-  particle.style.top = `${y}px`;
-  particle.style.background = color;
-  particle.style.opacity = Math.random() * 0.7 + 0.3;
-  const psize = size || randomBetween(3, 7);
-  particle.style.width = particle.style.height = `${psize}px`;
-  document.body.appendChild(particle);
-
-  const angle = randomBetween(0, 2 * Math.PI);
-  const distance = randomBetween(30, 80);
-  const dx = Math.cos(angle) * distance;
-  const dy = Math.sin(angle) * distance;
-
-  particle.animate([
-    { transform: 'translate(0,0) scale(1)', opacity: particle.style.opacity },
-    { transform: `translate(${dx}px,${dy}px) scale(0.5)`, opacity: 0 }
-  ], {
-    duration: duration || (900 + Math.random() * 400),
-    easing: 'cubic-bezier(.68,-0.55,.27,1.55)',
-    fill: 'forwards'
-  });
-
-  setTimeout(() => particle.remove(), (duration || 1200));
-}
-
-// Lanza partículas cerca de corazones aleatoriamente
-setInterval(() => {
-  const hearts = document.querySelectorAll('.heart');
-  if (hearts.length > 0) {
-    for (let i = 0; i < 14; i++) {
-      const heart = hearts[Math.floor(Math.random() * hearts.length)];
-      if (heart) {
-        const rect = heart.getBoundingClientRect();
-        const x = rect.left + rect.width / 2 + randomBetween(-8, 8);
-        const y = rect.top + rect.height / 2 + randomBetween(-8, 8);
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        createParticle(x, y, color);
-      }
-    }
-  }
-}, 250);
+}, isMobile() ? 60 : 30); // Más rápido (antes era 80)
 
 // --- INTERACTIVE HEART EXPLOSION ---
 function explodeHeart(heart) {
-  const rect = heart.getBoundingClientRect();
-  const x = rect.left + rect.width / 2;
-  const y = rect.top + rect.height / 2;
-  // Explota en muchas partículas pequeñas
-  for (let i = 0; i < 24; i++) {
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    createParticle(x, y, color, randomBetween(4, 10), 1200);
-  }
   heart.style.transition = 'transform 0.3s, opacity 0.3s';
   heart.style.transform += ' scale(2) rotate(40deg)';
   heart.style.opacity = 0;
@@ -197,11 +148,10 @@ document.addEventListener('click', function (e) {
   }
 });
 
-// --- ANIMACIÓN DE TEXTO: PULSE/BRILLO ---
 function addTextPulse() {
   const el = document.getElementById('typewriter');
   if (el) {
-    // Resalta "I love You" con una clase especial (sin animación, solo grande)
+    // Resalta "I love You" con una clase especial y aplica el brillo al texto central
     el.innerHTML = el.innerHTML.replace(
       /(I love You)/i,
       '<span class="love-big">$1</span>'
