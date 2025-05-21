@@ -91,6 +91,19 @@ function createHeart() {
     createHeart(); // Reemplaza el corazón para mantener la cantidad
   });
 
+  // Efecto al pasar el mouse: agrandar y hacer "pop"
+  heart.addEventListener('mouseenter', () => {
+    heart.style.transition = 'transform 0.2s cubic-bezier(.68,-0.55,.27,1.55), filter 0.2s';
+    heart.style.transform += ' scale(1.5)';
+    heart.style.filter = 'brightness(1.3) drop-shadow(0 0 12px #fff3)';
+  });
+  heart.addEventListener('mouseleave', () => {
+    heart.style.transition = 'transform 0.2s, filter 0.2s';
+    // Elimina solo el último scale si hay varios
+    heart.style.transform = heart.style.transform.replace(/scale\(1\.5\)/, '');
+    heart.style.filter = '';
+  });
+
   document.querySelector('.hearts-container').appendChild(heart);
 }
 
@@ -111,3 +124,138 @@ const interval = setInterval(() => {
     clearInterval(interval);
   }
 }, 30); // Más rápido (antes era 80)
+
+// --- PARTICLE EFFECT ---
+function createParticle(x, y, color, size = null, duration = null) {
+  const particle = document.createElement('div');
+  particle.className = 'particle';
+  particle.style.left = `${x}px`;
+  particle.style.top = `${y}px`;
+  particle.style.background = color;
+  particle.style.opacity = Math.random() * 0.7 + 0.3;
+  const psize = size || randomBetween(3, 7);
+  particle.style.width = particle.style.height = `${psize}px`;
+  document.body.appendChild(particle);
+
+  const angle = randomBetween(0, 2 * Math.PI);
+  const distance = randomBetween(30, 80);
+  const dx = Math.cos(angle) * distance;
+  const dy = Math.sin(angle) * distance;
+
+  particle.animate([
+    { transform: 'translate(0,0) scale(1)', opacity: particle.style.opacity },
+    { transform: `translate(${dx}px,${dy}px) scale(0.5)`, opacity: 0 }
+  ], {
+    duration: duration || (900 + Math.random() * 400),
+    easing: 'cubic-bezier(.68,-0.55,.27,1.55)',
+    fill: 'forwards'
+  });
+
+  setTimeout(() => particle.remove(), (duration || 1200));
+}
+
+// Lanza partículas cerca de corazones aleatoriamente
+setInterval(() => {
+  const hearts = document.querySelectorAll('.heart');
+  if (hearts.length > 0) {
+    for (let i = 0; i < 14; i++) {
+      const heart = hearts[Math.floor(Math.random() * hearts.length)];
+      if (heart) {
+        const rect = heart.getBoundingClientRect();
+        const x = rect.left + rect.width / 2 + randomBetween(-8, 8);
+        const y = rect.top + rect.height / 2 + randomBetween(-8, 8);
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        createParticle(x, y, color);
+      }
+    }
+  }
+}, 250);
+
+// --- INTERACTIVE HEART EXPLOSION ---
+function explodeHeart(heart) {
+  const rect = heart.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  // Explota en muchas partículas pequeñas
+  for (let i = 0; i < 24; i++) {
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    createParticle(x, y, color, randomBetween(4, 10), 1200);
+  }
+  heart.style.transition = 'transform 0.3s, opacity 0.3s';
+  heart.style.transform += ' scale(2) rotate(40deg)';
+  heart.style.opacity = 0;
+  setTimeout(() => {
+    heart.remove();
+    createHeart();
+  }, 300);
+}
+
+document.addEventListener('click', function (e) {
+  if (e.target.classList.contains('heart') || e.target.classList.contains('heart-shape')) {
+    const heart = e.target.closest('.heart');
+    if (heart) explodeHeart(heart);
+  }
+});
+
+// --- ANIMACIÓN DE TEXTO: PULSE/BRILLO ---
+function addTextPulse() {
+  const el = document.getElementById('typewriter');
+  if (el) {
+    // Resalta "I love You" con una clase especial (sin animación, solo grande)
+    el.innerHTML = el.innerHTML.replace(
+      /(I love You)/i,
+      '<span class="love-big">$1</span>'
+    );
+    el.classList.add('pulse-text');
+  }
+}
+
+// Typing effect for the center text
+function typeWriterEffect(element, lines, speed = 70, lineDelay = 600) {
+  let line = 0, char = 0;
+  function type() {
+    if (line < lines.length) {
+      if (char <= lines[line].length) {
+        element.innerHTML =
+          lines.slice(0, line).join('<br>') +
+          (line > 0 ? '<br>' : '') +
+          lines[line].slice(0, char) + '<span class="cursor">|</span>';
+        char++;
+        setTimeout(type, speed);
+      } else {
+        char = 0;
+        line++;
+        setTimeout(type, lineDelay);
+      }
+    } else {
+      // Inserta span solo en la segunda línea
+      element.innerHTML =
+        lines[0] + '<br><span class="love-big">' + lines[1] + '</span>';
+      addTextPulse();
+    }
+  }
+  type();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const typewriter = document.getElementById('typewriter');
+  typeWriterEffect(typewriter, ["Happy Birthday,", "I love You"]);
+});
+
+// --- SONIDO SUAVE DE FONDO ---
+let audio;
+function playBackgroundMusic() {
+  if (!audio) {
+    audio = document.createElement('audio');
+    audio.src = "https://cdn.pixabay.com/audio/2022/10/16/audio_12b5fae2b7.mp3"; // Piano romántico, libre de derechos
+    audio.loop = true;
+    audio.volume = 0.25;
+    document.body.appendChild(audio);
+  }
+  audio.play();
+}
+
+document.body.addEventListener('click', function playMusicOnce() {
+  playBackgroundMusic();
+  document.body.removeEventListener('click', playMusicOnce);
+});
