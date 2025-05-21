@@ -1,0 +1,98 @@
+body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  overflow: hidden;
+  height: 100vh;
+}
+
+.hearts-container {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  top: 0; left: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.center-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 2.5rem;
+  text-align: center;
+  z-index: 2;
+  font-weight: bold;
+  text-shadow: 0 2px 8px #000;
+}
+
+@media (max-width: 600px) {
+  .center-text {
+    font-size: 2.2rem;
+  }
+  .heart {
+    width: 32px !important;
+    height: 28px !important;
+  }
+}
+
+.heart {
+  position: absolute;
+  width: 40px;
+  height: 36px;
+  pointer-events: none;
+  opacity: 0.7;
+  z-index: 1;
+  animation: floatUp linear forwards;
+}
+
+.heart-shape {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0; top: 0;
+  background: inherit;
+  transform: rotate(-45deg);
+}
+
+.heart-shape::before,
+.heart-shape::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: inherit;
+  border-radius: 50%;
+}
+
+.heart-shape::before {
+  top: -50%;
+  left: 0;
+}
+
+.heart-shape::after {
+  left: 50%;
+  top: 0;
+}
+
+.love-big {
+  display: inline-block;
+  font-size: 1em;
+  transition: none;
+  filter: none;
+}
+
+.cursor {
+  display: inline-block;
+  width: 1ch;
+  animation: blink 1s steps(1) infinite;
+  color: #fff;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
