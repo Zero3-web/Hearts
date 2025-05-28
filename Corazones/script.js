@@ -1,0 +1,296 @@
+// script.js
+const canvas = document.getElementById('loveCanvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+let width = window.innerWidth;
+let height = window.innerHeight;
+canvas.width = width;
+canvas.height = height;
+
+function resizeCanvas() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  canvas.width = width;
+  canvas.height = height;
+}
+window.addEventListener('resize', resizeCanvas);
+
+function heartFunction(t, scale = 1) {
+  const x = 16 * Math.pow(Math.sin(t), 3);
+  const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+  return {
+    x: x * scale,
+    y: -y * scale
+  };
+}
+
+function randomPointInHeart(scale = 1, t = null, r = null) {
+  if (t === null) t = Math.random() * Math.PI * 2;
+  if (r === null) r = Math.random();
+  const border = heartFunction(t, scale);
+  const x = border.x * Math.sqrt(r);
+  const y = border.y * Math.sqrt(r);
+  return { x, y };
+}
+
+let disperseLevel = 0;
+const disperseSpeed = 0.012;
+
+class HeartParticle {
+  constructor(centerX, centerY, scale, t, r) {
+    const pos = randomPointInHeart(scale, t, r);
+    this.x0 = centerX + pos.x;
+    this.y0 = centerY + pos.y;
+    this.initX0 = this.x0;
+    this.initY0 = this.y0;
+    const minSize = isMobile() ? 7 : 11;
+    const maxSize = isMobile() ? 5 : 9;
+    this.size = minSize + Math.random() * maxSize;
+    this.color = `rgba(255,${60 + Math.floor(Math.random()*80)},${100 + Math.floor(Math.random()*80)},${0.7 + Math.random()*0.3})`;
+    this.opacity = 0.7 + Math.random() * 0.3;
+    this.angle = Math.random() * Math.PI * 2;
+    this.floatOffset = Math.random() * 1000;
+    this.dispersion = 0.22 + Math.random() * 0.38;
+    this.dispersionAngle = -Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 14;
+    this.life = 0;
+    this.isTop = this.y0 < centerY;
+    this.isBottom = this.y0 > centerY;
+    this.dispersing = false;
+    this.centerY = centerY;
+    this.shadowBlur = getShadowBlur();
+  }
+  update(time) {
+    const float = Math.sin((time + this.floatOffset) * 0.001) * 6;
+    const speedFactor = isMobile() ? 300 : 480;
+    if (this.dispersing) {
+      this.life += 0.045;
+      const dx = Math.cos(this.dispersionAngle) * this.dispersion * this.life * speedFactor;
+      const dy = Math.sin(this.dispersionAngle) * this.dispersion * this.life * speedFactor;
+      this.x = this.x0 + Math.cos(this.angle) * float + dx;
+      this.y = this.y0 + Math.sin(this.angle) * float + dy;
+    } else {
+      this.x = this.x0 + Math.cos(this.angle) * float;
+      this.y = this.y0 + Math.sin(this.angle) * float;
+    }
+  }
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = this.opacity;
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    ctx.scale(0.8, 0.8);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(
+      0, -this.size / 2,
+      -this.size, -this.size / 2,
+      -this.size, 0
+    );
+    ctx.bezierCurveTo(
+      -this.size, this.size,
+      0, this.size * 1.2,
+      0, this.size * 1.7
+    );
+    ctx.bezierCurveTo(
+      0, this.size * 1.2,
+      this.size, this.size,
+      this.size, 0
+    );
+    ctx.bezierCurveTo(
+      this.size, -this.size / 2,
+      0, -this.size / 2,
+      0, 0
+    );
+    ctx.closePath();
+    ctx.fillStyle = this.color;
+    ctx.shadowColor = '#f0f';
+    ctx.shadowBlur = this.shadowBlur;
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function isMobile() {
+  return /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+}
+
+const getOptimalParticles = () => {
+  if (!isMobile()) return 1100;
+  if (window.innerWidth < 400 || window.innerHeight < 700) return 700;
+  if (window.innerWidth < 600 || window.innerHeight < 900) return 900;
+  return 1050;
+};
+let NUM_PARTICLES = getOptimalParticles();
+let particles = [];
+
+function isInsideHeart(x, y) {
+  const yAdj = y * 1.13;
+  return Math.pow(x * x + yAdj * yAdj - 1, 3) - x * x * yAdj * yAdj * yAdj <= 0;
+}
+
+function createParticles() {
+  NUM_PARTICLES = getOptimalParticles();
+  particles = [];
+  const margin = 0.10;
+  const availableWidth = width * (1 - 2 * margin);
+  const availableHeight = height * (1 - 2 * margin);
+  const heartWidth = 32;
+  const heartHeight = 30;
+  const scale = Math.min(availableWidth / heartWidth, availableHeight / heartHeight);
+  const centerX = width / 2;
+  const centerY = height / 2 + scale * 2;
+  let tries = 0;
+  while (particles.length < NUM_PARTICLES && tries < NUM_PARTICLES * 20) {
+    const x = (Math.random() * 2.2 - 1.1);
+    const y = (Math.random() * 2.2 - 1.1);
+    if (isInsideHeart(x, y)) {
+      const px = centerX + x * 16 * scale;
+      const py = centerY - y * 13 * scale * 1.13;
+      const p = new HeartParticle(centerX, centerY, scale, null, null);
+      p.x0 = px;
+      p.y0 = py;
+      p.initX0 = px;
+      p.initY0 = py;
+      particles.push(p);
+    }
+    tries++;
+  }
+}
+createParticles();
+window.addEventListener('resize', createParticles);
+
+function getShadowBlur() {
+  if (NUM_PARTICLES > 1000) return 3;
+  if (NUM_PARTICLES > 800) return 4;
+  return 5;
+}
+
+let running = true;
+document.addEventListener('visibilitychange', () => {
+  running = !document.hidden;
+  if (running) requestAnimationFrame(animate);
+});
+
+let disperseBottom = true;
+let reloading = false;
+let reloadLevel = 0;
+const reloadSpeed = isMobile() ? 0.003 : 0.006;
+
+function getDispersedRatio() {
+  let dispersed = 0;
+  for (let p of particles) {
+    if (p.dispersing && (Math.abs(p.x - p.x0) > 30 || Math.abs(p.y - p.y0) > 30)) dispersed++;
+  }
+  return dispersed / particles.length;
+}
+
+function resetParticle(p, centerX, centerY, scale) {
+  const pos = randomPointInHeart(scale, null, null);
+  p.x0 = centerX + pos.x;
+  p.y0 = centerY + pos.y;
+  const minSize = isMobile() ? 7 : 11;
+  const maxSize = isMobile() ? 5 : 9;
+  p.size = minSize + Math.random() * maxSize;
+  p.color = `rgba(255,${60 + Math.floor(Math.random()*80)},${100 + Math.floor(Math.random()*80)},${0.7 + Math.random()*0.3})`;
+  p.opacity = 0.7 + Math.random() * 0.3;
+  p.angle = Math.random() * Math.PI * 2;
+  p.floatOffset = Math.random() * 1000;
+  p.dispersion = 0.22 + Math.random() * 0.38;
+  p.dispersionAngle = -Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 14;
+  p.life = 0;
+  p.dispersing = false;
+  p.isTop = p.y0 < centerY;
+  p.isBottom = p.y0 > centerY;
+  p.centerY = centerY;
+}
+
+function resetParticleToInitial(p) {
+  p.x0 = p.initX0;
+  p.y0 = p.initY0;
+  const minSize = isMobile() ? 7 : 11;
+  const maxSize = isMobile() ? 5 : 9;
+  p.size = minSize + Math.random() * maxSize;
+  p.color = `rgba(255,${60 + Math.floor(Math.random()*80)},${100 + Math.floor(Math.random()*80)},${0.7 + Math.random() * 0.3})`;
+  p.opacity = 0.7 + Math.random() * 0.3;
+  p.angle = Math.random() * Math.PI * 2;
+  p.floatOffset = Math.random() * 1000;
+  p.dispersion = 0.22 + Math.random() * 0.38;
+  p.dispersionAngle = -Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 14;
+  p.life = 0;
+  p.dispersing = false;
+}
+
+const DISPERSION_PERCENT = 0.7;
+
+let lastTime = 0;
+let frameSkip = 0;
+function animate(time = 0) {
+  if (!running) return;
+  if (time - lastTime < 1000 / 40) {
+    frameSkip++;
+    if (frameSkip < 1) {
+      requestAnimationFrame(animate);
+      return;
+    }
+    frameSkip = 0;
+  }
+  lastTime = time;
+  ctx.clearRect(0, 0, width, height);
+
+  if (!reloading && disperseLevel < 1) {
+    disperseLevel += disperseSpeed;
+    if (disperseLevel > 1) disperseLevel = 1;
+  }
+
+  if (!reloading) {
+    let minY = Infinity, maxY = -Infinity;
+    for (let p of particles) {
+      if (p.initY0 < minY) minY = p.initY0;
+      if (p.initY0 > maxY) maxY = p.initY0;
+    }
+    const thresholdY = minY + (maxY - minY) * disperseLevel;
+    for (let p of particles) {
+      if (p.initY0 <= thresholdY) {
+        p.dispersing = true;
+      }
+    }
+  }
+
+  if (!reloading && disperseLevel >= 1 && getDispersedRatio() >= 1) {
+    reloading = true;
+    reloadLevel = 0;
+  }
+
+  if (reloading) {
+    let minY = Infinity, maxY = -Infinity;
+    for (let p of particles) {
+      if (p.initY0 < minY) minY = p.initY0;
+      if (p.initY0 > maxY) maxY = p.initY0;
+    }
+    const thresholdY = minY + (maxY - minY) * reloadLevel;
+    for (let p of particles) {
+      if (p.dispersing && p.initY0 <= thresholdY) {
+        resetParticleToInitial(p);
+      }
+    }
+    reloadLevel += reloadSpeed;
+    if (reloadLevel >= 1) {
+      reloadLevel = 1;
+      reloading = false;
+      disperseLevel = 0;
+      for (let p of particles) {
+        p.dispersing = false;
+        p.x0 = p.initX0;
+        p.y0 = p.initY0;
+        p.life = 0;
+      }
+    }
+  }
+
+  for (let p of particles) {
+    p.update(time);
+    p.draw(ctx);
+  }
+
+  requestAnimationFrame(animate);
+}
+animate();
