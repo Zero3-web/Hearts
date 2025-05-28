@@ -34,6 +34,8 @@ function randomPointInHeart(scale = 1, t = null, r = null) {
 
 let disperseLevel = 0;
 const disperseSpeed = 0.012;
+let allowDisperse = false;
+let pageLoadTime = Date.now();
 
 class HeartParticle {
   constructor(centerX, centerY, scale, t, r) {
@@ -47,7 +49,7 @@ class HeartParticle {
     this.size = minSize + Math.random() * maxSize;
     this.color = `rgba(255,${60 + Math.floor(Math.random()*80)},${100 + Math.floor(Math.random()*80)},${0.7 + Math.random()*0.3})`;
     this.opacity = 0.7 + Math.random() * 0.3;
-    this.angle = Math.random() * Math.PI * 2;
+    this.angle = 0;
     this.floatOffset = Math.random() * 1000;
     this.dispersion = 0.22 + Math.random() * 0.38;
     this.dispersionAngle = -Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 14;
@@ -57,6 +59,8 @@ class HeartParticle {
     this.dispersing = false;
     this.centerY = centerY;
     this.shadowBlur = getShadowBlur();
+    // Offset aleatorio para el latido
+    this.beatOffset = Math.random() * Math.PI * 2;
   }
   update(time) {
     const float = Math.sin((time + this.floatOffset) * 0.001) * 6;
@@ -72,12 +76,19 @@ class HeartParticle {
       this.y = this.y0 + Math.sin(this.angle) * float;
     }
   }
-  draw(ctx) {
+  draw(ctx, time, bpm = 60) { // Cambia bpm por defecto a 60
+    // Latido individual con desfase
+    const freq = bpm / 60;
+    const beat = Math.sin(2 * Math.PI * freq * (time / 1000) + this.beatOffset);
+    // Más grande en mobile
+    const beatScale = isMobile()
+      ? 1 + 0.38 * Math.max(0, beat) // mobile: más grande
+      : 1 + 0.28 * Math.max(0, beat); // desktop
     ctx.save();
     ctx.globalAlpha = this.opacity;
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
-    ctx.scale(0.8, 0.8);
+    ctx.scale(0.8 * beatScale, 0.8 * beatScale);
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.bezierCurveTo(
@@ -115,9 +126,9 @@ function isMobile() {
 
 const getOptimalParticles = () => {
   if (!isMobile()) return 1100;
-  if (window.innerWidth < 400 || window.innerHeight < 700) return 700;
-  if (window.innerWidth < 600 || window.innerHeight < 900) return 900;
-  return 1050;
+  if (window.innerWidth < 400 || window.innerHeight < 700) return 1100; // antes 900
+  if (window.innerWidth < 600 || window.innerHeight < 900) return 1300; // antes 1100
+  return 1500; // antes 1300
 };
 let NUM_PARTICLES = getOptimalParticles();
 let particles = [];
@@ -138,10 +149,38 @@ function createParticles() {
   const scale = Math.min(availableWidth / heartWidth, availableHeight / heartHeight);
   const centerX = width / 2;
   const centerY = height / 2 + scale * 2;
+
+  // NUEVO: Usar una cuadrícula dispersa para cubrir mejor el corazón
+  const gridX = Math.floor(Math.sqrt(NUM_PARTICLES) * 1.25); // más columnas que filas
+  const gridY = Math.floor(NUM_PARTICLES / gridX);
+
+  let count = 0;
+  for (let i = 0; i < gridX; i++) {
+    for (let j = 0; j < gridY; j++) {
+      // Normalizar a [-1,1] y agregar aleatoriedad
+      const x = (i / (gridX - 1)) * 2 - 1 + (Math.random() - 0.5) * 0.08;
+      const y = (j / (gridY - 1)) * 2 - 1 + (Math.random() - 0.5) * 0.08;
+      if (isInsideHeart(x, y)) {
+        const px = centerX + x * 16 * scale;
+        const py = centerY - y * 13 * scale * 1.13;
+        const p = new HeartParticle(centerX, centerY, scale, null, null);
+        p.x0 = px;
+        p.y0 = py;
+        p.initX0 = px;
+        p.initY0 = py;
+        particles.push(p);
+        count++;
+        if (count >= NUM_PARTICLES) break;
+      }
+    }
+    if (count >= NUM_PARTICLES) break;
+  }
+
+  // Si faltan partículas por pequeños huecos, rellenar aleatoriamente
   let tries = 0;
-  while (particles.length < NUM_PARTICLES && tries < NUM_PARTICLES * 20) {
-    const x = (Math.random() * 2.2 - 1.1);
-    const y = (Math.random() * 2.2 - 1.1);
+  while (particles.length < NUM_PARTICLES && tries < NUM_PARTICLES * 5) {
+    const x = (Math.random() * 2.1 - 1.05);
+    const y = (Math.random() * 2.1 - 1.05);
     if (isInsideHeart(x, y)) {
       const px = centerX + x * 16 * scale;
       const py = centerY - y * 13 * scale * 1.13;
@@ -192,7 +231,7 @@ function resetParticle(p, centerX, centerY, scale) {
   p.size = minSize + Math.random() * maxSize;
   p.color = `rgba(255,${60 + Math.floor(Math.random()*80)},${100 + Math.floor(Math.random()*80)},${0.7 + Math.random()*0.3})`;
   p.opacity = 0.7 + Math.random() * 0.3;
-  p.angle = Math.random() * Math.PI * 2;
+  p.angle = 0;
   p.floatOffset = Math.random() * 1000;
   p.dispersion = 0.22 + Math.random() * 0.38;
   p.dispersionAngle = -Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 14;
@@ -211,7 +250,7 @@ function resetParticleToInitial(p) {
   p.size = minSize + Math.random() * maxSize;
   p.color = `rgba(255,${60 + Math.floor(Math.random()*80)},${100 + Math.floor(Math.random()*80)},${0.7 + Math.random() * 0.3})`;
   p.opacity = 0.7 + Math.random() * 0.3;
-  p.angle = Math.random() * Math.PI * 2;
+  p.angle = 0;
   p.floatOffset = Math.random() * 1000;
   p.dispersion = 0.22 + Math.random() * 0.38;
   p.dispersionAngle = -Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 14;
@@ -236,7 +275,23 @@ function animate(time = 0) {
   lastTime = time;
   ctx.clearRect(0, 0, width, height);
 
-  if (!reloading && disperseLevel < 1) {
+
+  // Latido: frecuencia y escala
+  const bpm = 60; // latidos por minuto, más lento
+  const freq = bpm / 60; // Hz
+  // El latido será una onda seno "aplanada" para que se note el pulso
+  const beat = Math.sin(2 * Math.PI * freq * (time / 1000));
+  // El valor oscila entre 0.93 y 1.38 aprox (ajustable)
+  const beatScale = isMobile()
+    ? 1 + 0.38 * Math.max(0, beat)
+    : 1 + 0.28 * Math.max(0, beat);
+
+  // Espera 4 segundos antes de permitir la dispersión
+  if (!allowDisperse && Date.now() - pageLoadTime >= 4000) {
+    allowDisperse = true;
+  }
+
+  if (allowDisperse && !reloading && disperseLevel < 1) {
     disperseLevel += disperseSpeed;
     if (disperseLevel > 1) disperseLevel = 1;
   }
@@ -277,6 +332,8 @@ function animate(time = 0) {
       reloadLevel = 1;
       reloading = false;
       disperseLevel = 0;
+      allowDisperse = false;
+      pageLoadTime = Date.now();
       for (let p of particles) {
         p.dispersing = false;
         p.x0 = p.initX0;
@@ -288,7 +345,7 @@ function animate(time = 0) {
 
   for (let p of particles) {
     p.update(time);
-    p.draw(ctx);
+    p.draw(ctx, time, bpm);
   }
 
   requestAnimationFrame(animate);
