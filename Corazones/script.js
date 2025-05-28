@@ -37,6 +37,22 @@ const disperseSpeed = 0.012;
 let allowDisperse = false;
 let pageLoadTime = Date.now();
 
+// Elimina todo lo relacionado con helloScreen, helloBtn y la transición inicial
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loveCanvas').style.display = 'block';
+  document.getElementById('loveText').style.display = 'block';
+  // Puedes reproducir la música automáticamente si el navegador lo permite
+  const loveAudio = document.getElementById('loveAudio');
+  if (loveAudio) {
+    // Descomenta la siguiente línea si quieres intentar reproducir automáticamente
+    // loveAudio.play();
+  }
+  // Dispersar corazones después de 3 segundos de cargar la página
+  setTimeout(() => {
+    allowDisperse = true;
+  }, 3000);
+});
+
 class HeartParticle {
   constructor(centerX, centerY, scale, t, r) {
     const pos = randomPointInHeart(scale, t, r);
@@ -125,10 +141,11 @@ function isMobile() {
 }
 
 const getOptimalParticles = () => {
-  if (!isMobile()) return 1100;
-  if (window.innerWidth < 400 || window.innerHeight < 700) return 1100; // antes 900
-  if (window.innerWidth < 600 || window.innerHeight < 900) return 1300; // antes 1100
-  return 1500; // antes 1300
+  if (!isMobile()) return 1500;
+  // En móviles, más partículas para un efecto más vistoso
+  if (window.innerWidth < 400 || window.innerHeight < 700) return 900;
+  if (window.innerWidth < 600 || window.innerHeight < 900) return 1200;
+  return 1500;
 };
 let NUM_PARTICLES = getOptimalParticles();
 let particles = [];
@@ -141,12 +158,13 @@ function isInsideHeart(x, y) {
 function createParticles() {
   NUM_PARTICLES = getOptimalParticles();
   particles = [];
-  const margin = 0.10;
-  const availableWidth = width * (1 - 2 * margin);
-  const availableHeight = height * (1 - 2 * margin);
+  // Eliminar margen para centrar perfectamente
   const heartWidth = 32;
   const heartHeight = 30;
-  const scale = Math.min(availableWidth / heartWidth, availableHeight / heartHeight);
+  let scale = Math.min(width / heartWidth, height / heartHeight);
+  if (isMobile()) {
+    scale *= 0.85; // Reduce el tamaño del corazón en móviles, pero menos
+  }
   const centerX = width / 2;
   const centerY = height / 2 + scale * 2;
 
@@ -198,6 +216,8 @@ createParticles();
 window.addEventListener('resize', createParticles);
 
 function getShadowBlur() {
+  // En móviles, menos blur para mejor rendimiento
+  if (isMobile()) return 2;
   if (NUM_PARTICLES > 1000) return 3;
   if (NUM_PARTICLES > 800) return 4;
   return 5;
@@ -212,7 +232,7 @@ document.addEventListener('visibilitychange', () => {
 let disperseBottom = true;
 let reloading = false;
 let reloadLevel = 0;
-const reloadSpeed = isMobile() ? 0.003 : 0.006;
+const reloadSpeed = isMobile() ? 0.008 : 0.006;
 
 function getDispersedRatio() {
   let dispersed = 0;
@@ -258,6 +278,30 @@ function resetParticleToInitial(p) {
   p.dispersing = false;
 }
 
+// NUEVO: Loop infinito de dispersión y recarga
+function startHeartLoop() {
+  // Si ya está en loop, no hacer nada
+  if (window._heartLoopActive) return;
+  window._heartLoopActive = true;
+
+  // Hook en animate para reiniciar el ciclo tras cada recarga
+  let lastReloading = false;
+  function loopCheck() {
+    // reloading y disperseLevel son globales
+    if (typeof reloading !== "undefined" && typeof disperseLevel !== "undefined") {
+      if (!reloading && disperseLevel === 0 && allowDisperse) {
+        // Esperar 2s y volver a dispersar
+        setTimeout(() => {
+          disperseLevel = 0;
+          allowDisperse = true;
+        }, 2000);
+      }
+    }
+    requestAnimationFrame(loopCheck);
+  }
+  loopCheck();
+}
+
 const DISPERSION_PERCENT = 0.7;
 
 let lastTime = 0;
@@ -277,7 +321,7 @@ function animate(time = 0) {
 
 
   // Latido: frecuencia y escala
-  const bpm = 60; // latidos por minuto, más lento
+  const bpm = 40; // latidos por minuto, más lento
   const freq = bpm / 60; // Hz
   // El latido será una onda seno "aplanada" para que se note el pulso
   const beat = Math.sin(2 * Math.PI * freq * (time / 1000));
@@ -286,9 +330,15 @@ function animate(time = 0) {
     ? 1 + 0.38 * Math.max(0, beat)
     : 1 + 0.28 * Math.max(0, beat);
 
-  // Espera 4 segundos antes de permitir la dispersión
-  if (!allowDisperse && Date.now() - pageLoadTime >= 4000) {
-    allowDisperse = true;
+  // En desktop, solo permitir dispersión tras click en el botón
+  if (!isMobile()) {
+    // Espera al click del botón para permitir dispersión
+    // allowDisperse se activa en el click del botón
+  } else {
+    // En mobile, siempre mostrar el mensaje y permitir dispersión tras 4s
+    if (!allowDisperse && Date.now() - pageLoadTime >= 4000) {
+      allowDisperse = true;
+    }
   }
 
   if (allowDisperse && !reloading && disperseLevel < 1) {
@@ -340,6 +390,10 @@ function animate(time = 0) {
         p.y0 = p.initY0;
         p.life = 0;
       }
+      // Dispersar corazones automáticamente después de 2 segundos de recarga
+      setTimeout(() => {
+        allowDisperse = true;
+      }, 2000);
     }
   }
 
@@ -351,3 +405,5 @@ function animate(time = 0) {
   requestAnimationFrame(animate);
 }
 animate();
+
+// El tap/click en mobile y el control de mobileTapDone ya no son necesarios

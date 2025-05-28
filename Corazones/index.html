@@ -20,7 +20,7 @@
       top: 0; left: 0; right: 0; bottom: 0;
       width: 100vw;
       height: 100vh;
-      z-index: 1; /* Cambiado para estar encima del texto */
+      z-index: 1;
     }
     #loveText {
       position: absolute;
@@ -32,13 +32,14 @@
       font-family: 'Arial', cursive, sans-serif;
       text-shadow: 0 0 10px #f00, 0 0 20px #f0f;
       pointer-events: none;
-      z-index: 0; /* Cambiado para estar debajo del canvas */
+      z-index: 0;
     }
   </style>
 </head>
 <body>
   <div id="loveText">I Love You!</div>
   <canvas id="loveCanvas"></canvas>
+  <audio id="loveAudio" src="Yiruma, (이루마) - River Flows in You.mp3" preload="auto"></audio>
   <script src="script.js"></script>
 </body>
 </html>
