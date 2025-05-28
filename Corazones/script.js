@@ -63,7 +63,12 @@ class HeartParticle {
     const minSize = isMobile() ? 7 : 11;
     const maxSize = isMobile() ? 5 : 9;
     this.size = minSize + Math.random() * maxSize;
-    this.color = `rgba(255,${60 + Math.floor(Math.random()*80)},${100 + Math.floor(Math.random()*80)},${0.7 + Math.random()*0.3})`;
+    // Color personalizado: rojo brillante, cálido, con poco verde y azul sutil para tonos rosados/corales
+    const red = 230 + Math.floor(Math.random() * 25);         // 230–254: rojo brillante, cálido
+    const green = 10 + Math.floor(Math.random() * 25);        // 10–34: poco verde, no neutraliza
+    const blue = 20 + Math.floor(Math.random() * 40);         // 20–59: sutil azul para tono rosado o coral
+    const alpha = (0.85 + Math.random() * 0.15).toFixed(2);   // 0.85–1.00: buena visibilidad
+    this.color = `rgba(${red}, ${green}, ${blue}, ${alpha})`;
     this.opacity = 0.7 + Math.random() * 0.3;
     this.angle = 0;
     this.floatOffset = Math.random() * 1000;
@@ -249,7 +254,12 @@ function resetParticle(p, centerX, centerY, scale) {
   const minSize = isMobile() ? 7 : 11;
   const maxSize = isMobile() ? 5 : 9;
   p.size = minSize + Math.random() * maxSize;
-  p.color = `rgba(255,${60 + Math.floor(Math.random()*80)},${100 + Math.floor(Math.random()*80)},${0.7 + Math.random()*0.3})`;
+  // Color personalizado igual que en HeartParticle
+  const red = 230 + Math.floor(Math.random() * 25);
+  const green = 10 + Math.floor(Math.random() * 25);
+  const blue = 20 + Math.floor(Math.random() * 40);
+  const alpha = (0.85 + Math.random() * 0.15).toFixed(2);
+  p.color = `rgba(${red}, ${green}, ${blue}, ${alpha})`;
   p.opacity = 0.7 + Math.random() * 0.3;
   p.angle = 0;
   p.floatOffset = Math.random() * 1000;
@@ -268,7 +278,12 @@ function resetParticleToInitial(p) {
   const minSize = isMobile() ? 7 : 11;
   const maxSize = isMobile() ? 5 : 9;
   p.size = minSize + Math.random() * maxSize;
-  p.color = `rgba(255,${60 + Math.floor(Math.random()*80)},${100 + Math.floor(Math.random()*80)},${0.7 + Math.random() * 0.3})`;
+  // Color personalizado igual que en HeartParticle
+  const red = 230 + Math.floor(Math.random() * 25);
+  const green = 10 + Math.floor(Math.random() * 25);
+  const blue = 20 + Math.floor(Math.random() * 40);
+  const alpha = (0.85 + Math.random() * 0.15).toFixed(2);
+  p.color = `rgba(${red}, ${green}, ${blue}, ${alpha})`;
   p.opacity = 0.7 + Math.random() * 0.3;
   p.angle = 0;
   p.floatOffset = Math.random() * 1000;
